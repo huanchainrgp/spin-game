@@ -1,10 +1,29 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import session from "express-session";
+import createMemoryStore from "memorystore";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Sessions
+const MemoryStore = createMemoryStore(session);
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "dev-secret-change-me",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: app.get("env") !== "development",
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    },
+    store: new MemoryStore({ checkPeriod: 1000 * 60 * 60 }),
+  })
+);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -61,11 +80,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });
 })();

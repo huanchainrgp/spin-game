@@ -27,10 +27,20 @@ interface SlotMachineProps {
 export function SlotMachine({ reels, isSpinning, onSpin, disabled, winAmount }: SlotMachineProps) {
   const [displayReels, setDisplayReels] = useState(reels);
   const [animatingReels, setAnimatingReels] = useState<boolean[]>([false, false, false]);
+  const [topSymbols, setTopSymbols] = useState<[SlotSymbol, SlotSymbol, SlotSymbol]>(['bar', 'cherry', 'bell']);
+  const [bottomSymbols, setBottomSymbols] = useState<[SlotSymbol, SlotSymbol, SlotSymbol]>(['diamond', 'seven', 'bar']);
+
+  function getRandomSymbol(): SlotSymbol {
+    const keys = Object.keys(SYMBOL_IMAGES) as SlotSymbol[];
+    return keys[Math.floor(Math.random() * keys.length)];
+  }
 
   useEffect(() => {
     if (isSpinning) {
       setAnimatingReels([true, true, true]);
+      // refresh filler symbols for top/bottom rows to create visual variety
+      setTopSymbols([getRandomSymbol(), getRandomSymbol(), getRandomSymbol()]);
+      setBottomSymbols([getRandomSymbol(), getRandomSymbol(), getRandomSymbol()]);
       
       const stopTimes = [600, 800, 1000];
       stopTimes.forEach((time, index) => {
@@ -55,30 +65,33 @@ export function SlotMachine({ reels, isSpinning, onSpin, disabled, winAmount }: 
     <div className="flex flex-col items-center gap-8">
       <div className="relative">
         <div 
-          className="flex gap-4 p-8 rounded-lg relative"
+          className="grid grid-cols-3 gap-4 p-8 rounded-lg relative"
           style={{
             background: 'linear-gradient(135deg, hsl(140 30% 10%) 0%, hsl(140 35% 15%) 100%)',
             boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
           }}
         >
-          {displayReels.map((symbol, index) => (
-            <div
-              key={index}
-              className="relative w-32 h-32 flex items-center justify-center rounded-md overflow-hidden"
-              style={{
-                background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.2) 100%)',
-                border: '3px solid hsl(45 95% 55%)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 2px 10px rgba(255,215,0,0.2)',
-              }}
-            >
-              <div className={`transition-all duration-200 ${animatingReels[index] ? 'animate-spin-reel blur-sm' : ''}`}>
-                <img 
-                  src={SYMBOL_IMAGES[symbol]} 
-                  alt={symbol} 
-                  className="w-24 h-24 object-contain"
-                  data-testid={`reel-${index}-symbol`}
-                />
-              </div>
+          {displayReels.map((middleSymbol, index) => (
+            <div key={index} className="flex flex-col gap-4">
+              {[topSymbols[index], middleSymbol, bottomSymbols[index]].map((symbol, rowIdx) => (
+                <div
+                  key={rowIdx}
+                  className="relative w-32 h-32 flex items-center justify-center rounded-md overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.2) 100%)',
+                    border: '3px solid hsl(45 95% 55%)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 2px 10px rgba(255,215,0,0.2)',
+                  }}
+                >
+                  <div className={`transition-all duration-200 ${animatingReels[index] ? 'animate-spin-reel blur-sm' : ''}`}>
+                    <img 
+                      src={SYMBOL_IMAGES[symbol]} 
+                      alt={symbol} 
+                      className="w-24 h-24 object-contain"
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>

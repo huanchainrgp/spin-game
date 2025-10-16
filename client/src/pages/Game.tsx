@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'wouter';
+import { authApi } from '@/lib/api';
+import { Button } from '@/components/ui/button';
 import { SlotMachine } from '@/components/SlotMachine';
 import { BetControls } from '@/components/BetControls';
 import { BalanceDisplay } from '@/components/BalanceDisplay';
@@ -14,7 +17,9 @@ const MAX_BET = 100;
 const STARTING_BALANCE = 1000;
 
 export default function Game() {
+  const [, navigate] = useLocation();
   const [player, setPlayer] = useState<Player | null>(null);
+  const [authUser, setAuthUser] = useState<{ id: string; username: string } | null>(null);
   const [betAmount, setBetAmount] = useState(10);
   const [reels, setReels] = useState<[SlotSymbol, SlotSymbol, SlotSymbol]>(['cherry', 'cherry', 'cherry']);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -28,79 +33,88 @@ export default function Game() {
   const playerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const playerName = prompt('Enter your name:') || `Player${Math.floor(Math.random() * 10000)}`;
-    
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      setIsConnected(true);
-      ws.send(JSON.stringify({
-        type: 'join',
-        data: { playerName }
-      }));
-    };
+    // Check session
+    authApi.me()
+      .then((me) => {
+        setAuthUser(me.user);
+        // open WS after auth
+        const playerName = me.user.username;
+        
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const ws = new WebSocket(wsUrl);
+        
+        ws.onopen = () => {
+          setIsConnected(true);
+          ws.send(JSON.stringify({
+            type: 'join',
+            data: { playerName }
+          }));
+        };
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      
-      switch (message.type) {
-        case 'game_state':
-          playerIdRef.current = message.data.player.id;
-          setPlayer(message.data.player);
-          setLeaderboard(message.data.leaderboard);
-          setRecentSpins(message.data.recentSpins);
-          setPlayerCount(message.data.playerCount);
-          break;
+        ws.onmessage = (event) => {
+          const message = JSON.parse(event.data);
           
-        case 'spin_result':
-          if (message.data.player.id === playerIdRef.current) {
-            setReels(message.data.reels);
-            setPlayer(message.data.player);
-            setLastWinAmount(message.data.winAmount);
-            
-            if (message.data.winAmount >= message.data.betAmount * 10) {
-              setShowBigWin(true);
-            }
-            
-            setTimeout(() => {
-              setIsSpinning(false);
-              setLastWinAmount(undefined);
-            }, 1200);
+          switch (message.type) {
+            case 'game_state':
+              playerIdRef.current = message.data.player.id;
+              setPlayer(message.data.player);
+              setLeaderboard(message.data.leaderboard);
+              setRecentSpins(message.data.recentSpins);
+              setPlayerCount(message.data.playerCount);
+              break;
+              
+            case 'spin_result':
+              if (message.data.player.id === playerIdRef.current) {
+                setReels(message.data.reels);
+                setPlayer(message.data.player);
+                setLastWinAmount(message.data.winAmount);
+                
+                if (message.data.winAmount >= message.data.betAmount * 10) {
+                  setShowBigWin(true);
+                }
+                
+                setTimeout(() => {
+                  setIsSpinning(false);
+                  setLastWinAmount(undefined);
+                }, 1200);
+              }
+              break;
+              
+            case 'player_spin':
+              setRecentSpins(prev => [message.data, ...prev].slice(0, 20));
+              if (message.data.playerId !== playerIdRef.current) {
+                setReels(message.data.reels);
+              }
+              break;
+              
+            case 'update_leaderboard':
+              setLeaderboard(message.data);
+              break;
+              
+            case 'player_count':
+              setPlayerCount(message.data.count);
+              break;
           }
-          break;
-          
-        case 'player_spin':
-          setRecentSpins(prev => [message.data, ...prev].slice(0, 20));
-          if (message.data.playerId !== playerIdRef.current) {
-            setReels(message.data.reels);
-          }
-          break;
-          
-        case 'update_leaderboard':
-          setLeaderboard(message.data);
-          break;
-          
-        case 'player_count':
-          setPlayerCount(message.data.count);
-          break;
-      }
-    };
+        };
 
-    ws.onclose = () => {
-      setIsConnected(false);
-    };
+        ws.onclose = () => {
+          setIsConnected(false);
+        };
 
-    ws.onerror = () => {
-      setIsConnected(false);
-    };
+        ws.onerror = () => {
+          setIsConnected(false);
+        };
 
-    wsRef.current = ws;
+        wsRef.current = ws;
 
-    return () => {
-      ws.close();
-    };
+        return () => {
+          ws.close();
+        };
+      })
+      .catch(() => {
+        navigate('/auth');
+      });
   }, []);
 
   const handleSpin = useCallback(() => {
@@ -114,6 +128,17 @@ export default function Game() {
       data: { betAmount }
     }));
   }, [player, betAmount, isSpinning]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } finally {
+      try { wsRef.current?.close(); } catch {}
+      setAuthUser(null);
+      setPlayer(null);
+      navigate('/auth');
+    }
+  }, [navigate]);
 
   if (!player) {
     return (
@@ -141,7 +166,15 @@ export default function Game() {
                 SPIN LUCKY
               </h1>
             </div>
-            <GameStatus playerCount={playerCount} isConnected={isConnected} />
+            <div className="flex items-center gap-4">
+              <GameStatus playerCount={playerCount} isConnected={isConnected} />
+              {authUser && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{authUser.username}</span>
+                  <Button size="sm" variant="outline" onClick={handleLogout}>Logout</Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>

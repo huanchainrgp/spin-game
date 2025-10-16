@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String  @id @default(uuid())
+  username String  @unique
+  password String
+  assets   Asset[]
+  participations ActivityParticipation[]
+}
+
+model Asset {
+  id        String   @id @default(uuid())
+  userId    String
+  balance   Int      @default(0)
+  updatedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Reward {
+  id     String @id @default(uuid())
+  name   String
+  type   String
+  value  Int     @default(0)
+  weight Int     @default(1)
+  color  String  @default("#FFD700")
+  icon   String  @default("trophy")
+  active Boolean @default(true)
+}
+
+/// Activities and participations
+enum ActivityType {
+  event
+  mission
+  campaign
+  promo
+}
+
+enum ActivityStatus {
+  inactive
+  active
+  expired
+}
+
+model Activity {
+  id               String         @id @default(uuid())
+  name             String         @db.VarChar(100)
+  type             ActivityType
+  description      String?
+  status           ActivityStatus @default(inactive)
+  startDate        DateTime?
+  endDate          DateTime?
+  rewardMultiplier Float          @default(1)
+  spinLimitBonus   Int            @default(0)
+  rules            Json?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  participations ActivityParticipation[]
+}
+
+model ActivityParticipation {
+  id          String   @id @default(uuid())
+  userId      String
+  activityId  String
+  progress    Int      @default(0)
+  completed   Boolean  @default(false)
+  rewardClaimed Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([activityId])
+}
+
+

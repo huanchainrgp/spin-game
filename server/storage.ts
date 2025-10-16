@@ -1,10 +1,18 @@
-import { type User, type InsertUser, type Player, type SpinResult, type LeaderboardEntry } from "@shared/schema";
+import { type User, type InsertUser, type Player, type SpinResult, type LeaderboardEntry, type Asset, type Reward, type InsertReward } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getAssetByUserId(userId: string): Promise<Asset | undefined>;
+  setAssetBalance(userId: string, balance: number): Promise<Asset>;
+  adjustAssetBalance(userId: string, delta: number): Promise<Asset>;
+  // Rewards
+  listRewards(): Promise<Reward[]>;
+  createReward(input: InsertReward): Promise<Reward>;
+  updateReward(id: string, input: Partial<InsertReward>): Promise<Reward | undefined>;
+  deleteReward(id: string): Promise<boolean>;
   
   getPlayer(id: string): Player | undefined;
   createPlayer(name: string): Player;
@@ -20,13 +28,17 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private assets: Map<string, Asset>;
   private players: Map<string, Player>;
   private spinHistory: SpinResult[];
+  private rewards: Map<string, Reward>;
 
   constructor() {
     this.users = new Map();
+    this.assets = new Map();
     this.players = new Map();
     this.spinHistory = [];
+    this.rewards = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -43,7 +55,62 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const user: User = { ...insertUser, id };
     this.users.set(id, user);
+    // Initialize asset with starting balance
+    const asset: Asset = { id: randomUUID(), userId: id, balance: 1000, updatedAt: new Date() };
+    this.assets.set(id, asset);
     return user;
+  }
+
+  async getAssetByUserId(userId: string): Promise<Asset | undefined> {
+    return this.assets.get(userId);
+  }
+
+  async setAssetBalance(userId: string, balance: number): Promise<Asset> {
+    const existing = this.assets.get(userId);
+    const updated: Asset = existing
+      ? { ...existing, balance, updatedAt: new Date() }
+      : { id: randomUUID(), userId, balance, updatedAt: new Date() };
+    this.assets.set(userId, updated);
+    return updated;
+  }
+
+  async adjustAssetBalance(userId: string, delta: number): Promise<Asset> {
+    const existing = this.assets.get(userId);
+    const currentBalance = existing?.balance ?? 0;
+    return this.setAssetBalance(userId, currentBalance + delta);
+  }
+
+  // Rewards CRUD
+  async listRewards(): Promise<Reward[]> {
+    return Array.from(this.rewards.values());
+  }
+
+  async createReward(input: InsertReward): Promise<Reward> {
+    const id = randomUUID();
+    const reward: Reward = {
+      id,
+      name: input.name,
+      type: input.type,
+      value: input.value ?? 0,
+      weight: input.weight ?? 1,
+      color: input.color ?? '#FFD700',
+      icon: input.icon ?? 'trophy',
+      active: 1,
+    } as Reward;
+    this.rewards.set(id, reward);
+    return reward;
+  }
+
+  async updateReward(id: string, input: Partial<InsertReward>): Promise<Reward | undefined> {
+    const existing = this.rewards.get(id);
+    if (!existing) return undefined;
+    const updated: Reward = { ...existing, ...input } as Reward;
+    this.rewards.set(id, updated);
+    return updated;
+  }
+
+  async deleteReward(id: string): Promise<boolean> {
+    return this.rewards.delete(id);
   }
 
   getPlayer(id: string): Player | undefined {
