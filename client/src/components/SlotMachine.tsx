@@ -65,33 +65,101 @@ export function SlotMachine({ reels, isSpinning, onSpin, disabled, winAmount }: 
     <div className="flex flex-col items-center gap-8">
       <div className="relative">
         <div 
-          className="grid grid-cols-3 gap-4 p-8 rounded-lg relative"
+          className="grid grid-cols-3 gap-6 p-6 md:p-8 rounded-xl relative"
           style={{
-            background: 'linear-gradient(135deg, hsl(140 30% 10%) 0%, hsl(140 35% 15%) 100%)',
-            boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5), 0 10px 40px rgba(0,0,0,0.3)',
+            background: 'linear-gradient(180deg, #09210e 0%, #112919 100%)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.55), inset 0 8px 30px rgba(0,0,0,0.6)',
+            borderRadius: '14px',
+            padding: '28px'
           }}
         >
           {displayReels.map((middleSymbol, index) => (
-            <div key={index} className="flex flex-col gap-4">
-              {[topSymbols[index], middleSymbol, bottomSymbols[index]].map((symbol, rowIdx) => (
-                <div
-                  key={rowIdx}
-                  className="relative w-32 h-32 flex items-center justify-center rounded-md overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.2) 100%)',
-                    border: '3px solid hsl(45 95% 55%)',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 2px 10px rgba(255,215,0,0.2)',
-                  }}
-                >
-                  <div className={`transition-all duration-200 ${animatingReels[index] ? 'animate-spin-reel blur-sm' : ''}`}>
-                    <img 
-                      src={SYMBOL_IMAGES[symbol]} 
-                      alt={symbol} 
-                      className="w-24 h-24 object-contain"
-                    />
+            <div key={index} className="flex flex-col gap-4 items-center">
+              {/* Top symbol */}
+                <div className="relative">
+                  <div
+                    className="flex items-center justify-center rounded-md overflow-hidden"
+                    style={{
+                      width: 112,
+                      height: 112,
+                      padding: 8,
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))',
+                      boxShadow: '0 8px 18px rgba(0,0,0,0.5), inset 0 2px 8px rgba(255,255,255,0.02)'
+                    }}
+                  >
+                    <div
+                      style={{
+                        border: '6px solid #f5c400',
+                        borderRadius: 8,
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'white'
+                      }}
+                    >
+                      <div className={`transition-all duration-200 ${animatingReels[index] ? 'animate-spin-reel blur-sm' : 'hover:scale-105'}`}>
+                        <img
+                          src={SYMBOL_IMAGES[topSymbols[index]]}
+                          alt={topSymbols[index]}
+                          className="w-16 h-16 md:w-20 md:h-20 object-contain transition-transform"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
+
+              {/* Middle symbol */}
+              <div className="relative">
+                <div
+                  className="flex items-center justify-center rounded-md overflow-hidden"
+                  style={{
+                    width: 112,
+                    height: 112,
+                    padding: 8,
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))',
+                    boxShadow: '0 8px 18px rgba(0,0,0,0.5), inset 0 2px 8px rgba(255,255,255,0.02)'
+                  }}
+                >
+                  <div
+                    style={{
+                      border: '6px solid #f5c400',
+                      borderRadius: 8,
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'white'
+                    }}
+                  >
+                    <div className={`transition-all duration-200 ${animatingReels[index] ? 'animate-spin-reel blur-sm' : 'hover:scale-105'}`}>
+                      <img
+                        src={SYMBOL_IMAGES[middleSymbol]}
+                        alt={middleSymbol}
+                        className="w-16 h-16 md:w-20 md:h-20 object-contain transition-transform"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom placeholder (empty framed slot) */}
+              <div className="relative">
+                <div
+                  className="flex items-center justify-center rounded-md overflow-hidden"
+                  style={{
+                    width: 112,
+                    height: 112,
+                    padding: 8,
+                    background: 'linear-gradient(180deg, rgba(0,0,0,0.02), rgba(255,255,255,0.01))',
+                    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  <div style={{ border: '6px dashed rgba(245,196,0,0.24)', borderRadius: 8, width: '100%', height: '100%' }} />
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -109,7 +177,14 @@ export function SlotMachine({ reels, isSpinning, onSpin, disabled, winAmount }: 
         size="lg"
         onClick={onSpin}
         disabled={disabled || isSpinning}
-        className="relative group min-h-16 px-12 text-2xl font-display tracking-wider bg-gold hover:bg-gold text-gold-foreground border-2 border-gold-border shadow-[0_0_30px_rgba(251,191,36,0.4)] transition-all hover:shadow-[0_0_50px_rgba(251,191,36,0.6)] active:scale-95"
+        className="relative group min-h-16 px-12 text-2xl font-display tracking-wider transition-transform active:scale-95"
+        style={{
+          background: 'linear-gradient(180deg, #ffd54a, #f5c400)',
+          color: '#222',
+          borderRadius: 8,
+          boxShadow: '0 18px 40px rgba(245,196,0,0.35), inset 0 2px 0 rgba(255,255,255,0.25)',
+          border: '2px solid rgba(0,0,0,0.08)'
+        }}
         data-testid="button-spin"
       >
         <span className="flex items-center gap-3">

@@ -1,14 +1,15 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { insertUserSchema, insertRewardSchema } from "@shared/schema";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { spinReels, calculateWinAmount } from "./game-logic";
+import bcrypt from 'bcryptjs';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple admin guard: username === 'admin'
-  function requireAdmin(req: any, res: any, next: any) {
-    const userId = req.session?.userId as string | undefined;
+  function requireAdmin(req: Request, res: Response, next: NextFunction) {
+    const userId = (req as any).session?.userId as string | undefined;
     if (!userId) return res.status(401).json({ message: 'Not authenticated' });
     storage.getUser(userId).then((user) => {
       if (!user || user.username !== 'admin') {
@@ -19,7 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Admin overview
-  app.get('/api/admin/overview', requireAdmin, async (_req, res) => {
+  app.get('/api/admin/overview', requireAdmin, async (_req: Request, res: Response) => {
     try {
       const players = storage.getAllPlayers();
       const recentSpins = storage.getRecentSpins(20);
@@ -41,33 +42,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Rewards CRUD
-  app.get('/api/admin/rewards', requireAdmin, async (_req, res) => {
+  app.get('/api/admin/rewards', requireAdmin, async (_req: Request, res: Response) => {
     const rewards = await storage.listRewards();
     return res.json(rewards);
   });
 
-  app.post('/api/admin/rewards', requireAdmin, async (req, res) => {
+  app.post('/api/admin/rewards', requireAdmin, async (req: Request, res: Response) => {
     const parse = insertRewardSchema.safeParse(req.body);
     if (!parse.success) return res.status(400).json({ message: 'Invalid payload' });
     const created = await storage.createReward(parse.data);
     return res.json(created);
   });
 
-  app.put('/api/admin/rewards/:id', requireAdmin, async (req, res) => {
+  app.put('/api/admin/rewards/:id', requireAdmin, async (req: Request, res: Response) => {
     const id = req.params.id;
     const updated = await storage.updateReward(id, req.body || {});
     if (!updated) return res.status(404).json({ message: 'Not found' });
     return res.json(updated);
   });
 
-  app.delete('/api/admin/rewards/:id', requireAdmin, async (req, res) => {
+  app.delete('/api/admin/rewards/:id', requireAdmin, async (req: Request, res: Response) => {
     const id = req.params.id;
     const ok = await storage.deleteReward(id);
     return res.json({ ok });
   });
 
   // Auth endpoints
-  app.post('/api/auth/signup', async (req, res) => {
+  app.post('/api/auth/signup', async (req: Request, res: Response) => {
     try {
       const parse = insertUserSchema.safeParse(req.body);
       if (!parse.success) {
@@ -89,14 +90,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body || {};
       if (!username || !password) {
         return res.status(400).json({ message: 'Missing username or password' });
       }
       const user = await storage.getUserByUsername(username);
-      if (!user || user.password !== password) {
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      const ok = await bcrypt.compare(password, user.password);
+      if (!ok) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
       (req as any).session.userId = user.id;
@@ -107,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/auth/me', async (req, res) => {
+  app.get('/api/auth/me', async (req: Request, res: Response) => {
     try {
       const userId = (req as any).session?.userId as string | undefined;
       if (!userId) {
@@ -124,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/logout', (req, res) => {
+  app.post('/api/auth/logout', (req: Request, res: Response) => {
     try {
       const sess = (req as any).session;
       if (sess) {
@@ -157,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws: WebSocket) => {
     let playerId: string | null = null;
 
     ws.on('message', (data) => {

@@ -10,22 +10,22 @@ interface PlayerFeedProps {
 
 export function PlayerFeed({ recentSpins, className = '' }: PlayerFeedProps) {
   return (
-    <Card className={`p-4 ${className}`}>
-      <div className="space-y-4">
+    <Card className={`p-3 md:p-4 ${className} glass`}>
+      <div className="space-y-3">
         <h3 className="text-lg font-display font-bold uppercase tracking-wide">
           Live Feed
         </h3>
 
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2 max-h-[360px] md:max-h-[420px] overflow-y-auto">
           {recentSpins.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-6 text-muted-foreground">
               No recent spins yet
             </div>
           ) : (
             recentSpins.map((spin, index) => (
               <div
                 key={`${spin.playerId}-${spin.timestamp}-${index}`}
-                className={`flex items-center gap-3 p-3 rounded-md animate-slide-up transition-colors ${
+                className={`flex items-center gap-3 p-2 md:p-3 rounded-md animate-slide-up transition-colors ${
                   spin.winAmount > 0 
                     ? 'bg-gold/10 border border-gold/20' 
                     : 'bg-card hover-elevate'

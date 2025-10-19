@@ -11,6 +11,7 @@ import { GameStatus } from '@/components/GameStatus';
 import { WinCelebration } from '@/components/WinCelebration';
 import { Player, SpinResult, LeaderboardEntry, SlotSymbol } from '@shared/schema';
 import logoImg from '@assets/image_1760606710903.png';
+import Header from '@/components/ui/header';
 
 const MIN_BET = 1;
 const MAX_BET = 100;
@@ -157,7 +158,8 @@ export default function Game() {
         />
       )}
 
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+      {/* use glassy header component for nicer look */}
+      <Header>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -177,7 +179,7 @@ export default function Game() {
             </div>
           </div>
         </div>
-      </header>
+      </Header>
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

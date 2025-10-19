@@ -1,5 +1,6 @@
 import { type User, type InsertUser, type Player, type SpinResult, type LeaderboardEntry, type Asset, type Reward, type InsertReward } from "@shared/schema";
 import { randomUUID } from "crypto";
+import bcrypt from 'bcryptjs';
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -53,7 +54,8 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const hashed = await bcrypt.hash(insertUser.password, 10);
+    const user: User = { ...insertUser, password: hashed, id };
     this.users.set(id, user);
     // Initialize asset with starting balance
     const asset: Asset = { id: randomUUID(), userId: id, balance: 1000, updatedAt: new Date() };

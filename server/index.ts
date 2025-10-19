@@ -3,10 +3,15 @@ import { registerRoutes } from "./routes";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { setupVite, serveStatic, log } from "./vite";
+import swaggerUi from "swagger-ui-express";
+import { swaggerDocument } from "./swagger";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Sessions
 const MemoryStore = createMemoryStore(session);
@@ -22,7 +27,7 @@ app.use(
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
     store: new MemoryStore({ checkPeriod: 1000 * 60 * 60 }),
-  })
+  }) as any
 );
 
 app.use((req, res, next) => {

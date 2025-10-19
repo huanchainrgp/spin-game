@@ -17,8 +17,8 @@ const RANK_ICONS = {
 
 export function Leaderboard({ entries, currentPlayerId, className = '' }: LeaderboardProps) {
   return (
-    <Card className={`p-4 ${className}`}>
-      <div className="space-y-4">
+    <Card className={`p-3 md:p-4 ${className} glass`}>
+      <div className="space-y-3">
         <h3 className="text-lg font-display font-bold uppercase tracking-wide">
           Leaderboard
         </h3>
